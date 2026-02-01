@@ -48,7 +48,7 @@ jobs:
           -r linux-x64 \
           --self-contained true \
           -p:PublishSingleFile=true \
-          -p:PublishTrimmed=true \
+          -p:PublishTrimmed=false \
           -o ./build_output/linux
 
       # --- ШАГ 4: СБОРКА WINDOWS ---
@@ -59,7 +59,7 @@ jobs:
           -r win-x64 \
           --self-contained true \
           -p:PublishSingleFile=true \
-          -p:PublishTrimmed=true \
+          -p:PublishTrimmed=false \
           -o ./build_output/windows
 
       # --- ШАГ 5: УПАКОВКА ---
