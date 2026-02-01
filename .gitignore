@@ -1,0 +1,24 @@
+## Ignore Visual Studio / Rider temp files
+.idea/
+*.sln.iml
+.vs/
+.vscode/
+bin/
+obj/
+
+## Ignore Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+build/
+*.dll
+*.exe
+*.pdb
+*.user
+*.suo
+*.userprefs
+
+## Ignore OS generated files
+.DS_Store
+Thumbs.db

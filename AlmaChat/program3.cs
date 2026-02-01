@@ -9,7 +9,7 @@ using Terminal.Gui;
 using Terminal.Gui.Graphs;
 
 // === ENUMS ===
-public enum AppTheme { HighContrast, SoftDark, Catppuccin }
+public enum AppTheme { HighContrast, SoftDark, Catppuccin, Palenight, Gruvbox, Monokai, Material }
 
 class Program
 {
@@ -192,39 +192,74 @@ class Program
     static void ApplyTheme(AppTheme theme)
     {
         CurrentTheme = theme;
-        
+        var driver = Application.Driver;
+        var bg = Color.Black; // Базовый фон для большинства тем
+
         switch (theme)
         {
+            case AppTheme.Palenight:
+                BaseScheme = new ColorScheme { Normal = driver.MakeAttribute(Color.BrightBlue, bg), Focus = driver.MakeAttribute(Color.Black, Color.BrightMagenta), HotNormal = driver.MakeAttribute(Color.Cyan, bg) };
+                InputScheme = new ColorScheme { Normal = driver.MakeAttribute(Color.Gray, Color.DarkGray), Focus = driver.MakeAttribute(Color.White, Color.BrightBlue) };
+                ListScheme = new ColorScheme { Normal = driver.MakeAttribute(Color.BrightMagenta, bg), Focus = driver.MakeAttribute(Color.Black, Color.Cyan), HotNormal = driver.MakeAttribute(Color.White, bg) };
+                AccentScheme = new ColorScheme { Normal = driver.MakeAttribute(Color.BrightCyan, bg) };
+                InfoScheme = new ColorScheme { Normal = driver.MakeAttribute(Color.DarkGray, bg) };
+                break;
+
+            case AppTheme.Gruvbox:
+                BaseScheme = new ColorScheme { Normal = driver.MakeAttribute(Color.BrightYellow, bg), Focus = driver.MakeAttribute(Color.Black, Color.Brown), HotNormal = driver.MakeAttribute(Color.BrightRed, bg) };
+                InputScheme = new ColorScheme { Normal = driver.MakeAttribute(Color.Brown, Color.DarkGray), Focus = driver.MakeAttribute(Color.Black, Color.BrightYellow) };
+                ListScheme = new ColorScheme { Normal = driver.MakeAttribute(Color.Gray, bg), Focus = driver.MakeAttribute(Color.Black, Color.BrightGreen), HotNormal = driver.MakeAttribute(Color.BrightYellow, bg) };
+                AccentScheme = new ColorScheme { Normal = driver.MakeAttribute(Color.BrightRed, bg) };
+                InfoScheme = new ColorScheme { Normal = driver.MakeAttribute(Color.Brown, bg) };
+                break;
+
+            case AppTheme.Monokai:
+                BaseScheme = new ColorScheme { Normal = driver.MakeAttribute(Color.White, bg), Focus = driver.MakeAttribute(Color.Black, Color.BrightMagenta), HotNormal = driver.MakeAttribute(Color.BrightGreen, bg) };
+                InputScheme = new ColorScheme { Normal = driver.MakeAttribute(Color.BrightYellow, Color.DarkGray), Focus = driver.MakeAttribute(Color.Black, Color.BrightCyan) };
+                ListScheme = new ColorScheme { Normal = driver.MakeAttribute(Color.BrightGreen, bg), Focus = driver.MakeAttribute(Color.Black, Color.BrightYellow), HotNormal = driver.MakeAttribute(Color.BrightMagenta, bg) };
+                AccentScheme = new ColorScheme { Normal = driver.MakeAttribute(Color.BrightCyan, bg) };
+                InfoScheme = new ColorScheme { Normal = driver.MakeAttribute(Color.Gray, bg) };
+                break;
+
+            case AppTheme.Material:
+                BaseScheme = new ColorScheme { Normal = driver.MakeAttribute(Color.BrightCyan, bg), Focus = driver.MakeAttribute(Color.Black, Color.White), HotNormal = driver.MakeAttribute(Color.BrightBlue, bg) };
+                InputScheme = new ColorScheme { Normal = driver.MakeAttribute(Color.White, Color.DarkGray), Focus = driver.MakeAttribute(Color.Black, Color.BrightCyan) };
+                ListScheme = new ColorScheme { Normal = driver.MakeAttribute(Color.Gray, bg), Focus = driver.MakeAttribute(Color.Black, Color.BrightBlue), HotNormal = driver.MakeAttribute(Color.BrightCyan, bg) };
+                AccentScheme = new ColorScheme { Normal = driver.MakeAttribute(Color.BrightBlue, bg) };
+                InfoScheme = new ColorScheme { Normal = driver.MakeAttribute(Color.DarkGray, bg) };
+                break;
+
             case AppTheme.SoftDark:
-                BaseScheme = new ColorScheme { Normal = Application.Driver.MakeAttribute(Color.Gray, Color.Black), Focus = Application.Driver.MakeAttribute(Color.White, Color.DarkGray), HotNormal = Application.Driver.MakeAttribute(Color.White, Color.Black) };
-                InputScheme = new ColorScheme { Normal = Application.Driver.MakeAttribute(Color.DarkGray, Color.Black), Focus = Application.Driver.MakeAttribute(Color.White, Color.DarkGray) };
-                ListScheme = new ColorScheme { Normal = Application.Driver.MakeAttribute(Color.DarkGray, Color.Black), Focus = Application.Driver.MakeAttribute(Color.Black, Color.Gray), HotNormal = Application.Driver.MakeAttribute(Color.White, Color.Black) };
-                AccentScheme = new ColorScheme { Normal = Application.Driver.MakeAttribute(Color.Blue, Color.Black) };
-                InfoScheme = new ColorScheme { Normal = Application.Driver.MakeAttribute(Color.DarkGray, Color.Black) };
+                BaseScheme = new ColorScheme { Normal = driver.MakeAttribute(Color.Gray, Color.Black), Focus = driver.MakeAttribute(Color.White, Color.DarkGray), HotNormal = driver.MakeAttribute(Color.White, Color.Black) };
+                InputScheme = new ColorScheme { Normal = driver.MakeAttribute(Color.DarkGray, Color.Black), Focus = driver.MakeAttribute(Color.White, Color.DarkGray) };
+                ListScheme = new ColorScheme { Normal = driver.MakeAttribute(Color.DarkGray, Color.Black), Focus = driver.MakeAttribute(Color.Black, Color.Gray), HotNormal = driver.MakeAttribute(Color.White, Color.Black) };
+                AccentScheme = new ColorScheme { Normal = driver.MakeAttribute(Color.Blue, Color.Black) };
+                InfoScheme = new ColorScheme { Normal = driver.MakeAttribute(Color.DarkGray, Color.Black) };
                 break;
 
             case AppTheme.Catppuccin:
-                var bg = Color.Black; 
-                BaseScheme = new ColorScheme { Normal = Application.Driver.MakeAttribute(Color.BrightCyan, bg), Focus = Application.Driver.MakeAttribute(Color.Black, Color.BrightBlue), HotNormal = Application.Driver.MakeAttribute(Color.BrightMagenta, bg) };
-                InputScheme = new ColorScheme { Normal = Application.Driver.MakeAttribute(Color.BrightYellow, Color.DarkGray), Focus = Application.Driver.MakeAttribute(Color.Black, Color.BrightGreen) };
-                ListScheme = new ColorScheme { Normal = Application.Driver.MakeAttribute(Color.BrightBlue, bg), Focus = Application.Driver.MakeAttribute(Color.Black, Color.BrightMagenta), HotNormal = Application.Driver.MakeAttribute(Color.BrightGreen, bg) };
-                AccentScheme = new ColorScheme { Normal = Application.Driver.MakeAttribute(Color.BrightMagenta, bg) };
-                InfoScheme = new ColorScheme { Normal = Application.Driver.MakeAttribute(Color.Gray, bg) };
+                BaseScheme = new ColorScheme { Normal = driver.MakeAttribute(Color.BrightCyan, bg), Focus = driver.MakeAttribute(Color.Black, Color.BrightBlue), HotNormal = driver.MakeAttribute(Color.BrightMagenta, bg) };
+                InputScheme = new ColorScheme { Normal = driver.MakeAttribute(Color.BrightYellow, Color.DarkGray), Focus = driver.MakeAttribute(Color.Black, Color.BrightGreen) };
+                ListScheme = new ColorScheme { Normal = driver.MakeAttribute(Color.BrightBlue, bg), Focus = driver.MakeAttribute(Color.Black, Color.BrightMagenta), HotNormal = driver.MakeAttribute(Color.BrightGreen, bg) };
+                AccentScheme = new ColorScheme { Normal = driver.MakeAttribute(Color.BrightMagenta, bg) };
+                InfoScheme = new ColorScheme { Normal = driver.MakeAttribute(Color.Gray, bg) };
                 break;
 
             case AppTheme.HighContrast:
             default:
-                BaseScheme = new ColorScheme { Normal = Application.Driver.MakeAttribute(Color.White, Color.Black), Focus = Application.Driver.MakeAttribute(Color.BrightCyan, Color.Black), HotNormal = Application.Driver.MakeAttribute(Color.BrightGreen, Color.Black) };
-                InputScheme = new ColorScheme { Normal = Application.Driver.MakeAttribute(Color.BrightYellow, Color.Gray), Focus = Application.Driver.MakeAttribute(Color.Black, Color.BrightCyan) };
-                ListScheme = new ColorScheme { Normal = Application.Driver.MakeAttribute(Color.Gray, Color.Black), Focus = Application.Driver.MakeAttribute(Color.Black, Color.BrightGreen), HotNormal = Application.Driver.MakeAttribute(Color.BrightGreen, Color.Black) };
-                AccentScheme = new ColorScheme { Normal = Application.Driver.MakeAttribute(Color.BrightMagenta, Color.Black) };
-                InfoScheme = new ColorScheme { Normal = Application.Driver.MakeAttribute(Color.DarkGray, Color.Black) };
+                BaseScheme = new ColorScheme { Normal = driver.MakeAttribute(Color.White, Color.Black), Focus = driver.MakeAttribute(Color.BrightCyan, Color.Black), HotNormal = driver.MakeAttribute(Color.BrightGreen, Color.Black) };
+                InputScheme = new ColorScheme { Normal = driver.MakeAttribute(Color.BrightYellow, Color.Gray), Focus = driver.MakeAttribute(Color.Black, Color.BrightCyan) };
+                ListScheme = new ColorScheme { Normal = driver.MakeAttribute(Color.Gray, Color.Black), Focus = driver.MakeAttribute(Color.Black, Color.BrightGreen), HotNormal = driver.MakeAttribute(Color.BrightGreen, Color.Black) };
+                AccentScheme = new ColorScheme { Normal = driver.MakeAttribute(Color.BrightMagenta, Color.Black) };
+                InfoScheme = new ColorScheme { Normal = driver.MakeAttribute(Color.DarkGray, Color.Black) };
                 break;
         }
 
-        ErrorScheme = new ColorScheme { Normal = Application.Driver.MakeAttribute(Color.BrightRed, Color.Black) };
-        NotifScheme = new ColorScheme { Normal = Application.Driver.MakeAttribute(Color.Black, Color.BrightYellow) };
+        // Применяем общие цвета ошибок и уведомлений
+        ErrorScheme = new ColorScheme { Normal = driver.MakeAttribute(Color.BrightRed, Color.Black) };
+        NotifScheme = new ColorScheme { Normal = driver.MakeAttribute(Color.Black, Color.BrightYellow) };
 
+        // Обновляем элементы интерфейса, если они созданы
         if (mainWin != null) {
             mainWin.ColorScheme = BaseScheme;
             chatListView.ColorScheme = ListScheme;
@@ -279,11 +314,20 @@ class Program
 
     static void ShowThemeSelector()
     {
-        var d = new Dialog(" :: UI THEME :: ", 40, 10);
-        var rGroup = new RadioGroup(new ustring[] { "High Contrast", "Soft Dark", "Catppuccin" }) { X = 2, Y = 1 };
+        var d = new Dialog(" :: UI THEME :: ", 45, 15);
+        var rGroup = new RadioGroup(new ustring[] { 
+            "High Contrast", 
+            "Soft Dark", 
+            "Catppuccin", 
+            "Palenight", 
+            "Gruvbox", 
+            "Monokai", 
+            "Material" 
+        }) { X = 2, Y = 1 };
+    
         rGroup.SelectedItem = (int)CurrentTheme;
 
-        var btnApply = new Button("Apply") { X = Pos.Center(), Y = 6 };
+        var btnApply = new Button("Apply") { X = Pos.Center(), Y = 11 };
         btnApply.Clicked += () => {
             ApplyTheme((AppTheme)rGroup.SelectedItem);
             Application.RequestStop();

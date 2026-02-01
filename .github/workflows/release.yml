@@ -1,0 +1,93 @@
+name: Build & Release (AlmaChat)
+
+on:
+  push:
+    tags:
+      - "v*.*.*" # Запуск при пуше тега (v1.0.0, v1.0.1 и т.д.)
+
+jobs:
+  release:
+    name: Build and Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # --- ШАГ 1: ВНЕДРЕНИЕ ВЕРСИИ ---
+      # Мы ищем файл program3.cs внутри папки AlmaChat
+      - name: Inject Version into Code
+        run: |
+          echo "Injecting version ${{ github.ref_name }} into AlmaChat/program3.cs"
+          
+          # sed ищет строку CurrentAppVersion = "..."; и меняет её на версию из тега
+          sed -i 's/static string CurrentAppVersion = ".*";/static string CurrentAppVersion = "${{ github.ref_name }}";/' AlmaChat/program3.cs
+          
+          # Проверка (вывод в лог)
+          grep "CurrentAppVersion" AlmaChat/program3.cs
+
+      # --- ШАГ 2: УСТАНОВКА .NET ---
+      # Судя по дереву bin/Debug/net10.0, вы используете bleeding edge версию.
+      # Если это ошибка и там net8.0 или net9.0, поменяйте версию ниже.
+      # Для .NET 10 (preview) может потребоваться include-prerelease: true
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x' # Используйте актуальную стабильную (8.0.x или 9.0.x)
+          # Если реально нужен .NET 10 preview, раскомментируйте:
+          # dotnet-quality: 'preview'
+
+      # --- ШАГ 3: СБОРКА LINUX ---
+      # Указываем путь к .csproj файлу явно: ./AlmaChat/AlmaChat.csproj
+      - name: Build for Linux
+        run: |
+          dotnet publish ./AlmaChat/AlmaChat.csproj \
+          -c Release \
+          -r linux-x64 \
+          --self-contained true \
+          -p:PublishSingleFile=true \
+          -p:PublishTrimmed=true \
+          -o ./build_output/linux
+
+      # --- ШАГ 4: СБОРКА WINDOWS ---
+      - name: Build for Windows
+        run: |
+          dotnet publish ./AlmaChat/AlmaChat.csproj \
+          -c Release \
+          -r win-x64 \
+          --self-contained true \
+          -p:PublishSingleFile=true \
+          -p:PublishTrimmed=true \
+          -o ./build_output/windows
+
+      # --- ШАГ 5: УПАКОВКА ---
+      - name: Package Releases
+        run: |
+          mkdir release_assets
+          
+          # --- Packaging Linux ---
+          cd ./build_output/linux
+          # Файл называется AlmaChat (без exe), переименуем для ясности
+          mv AlmaChat AlmaChat-Linux
+          # Пакуем в tar.gz для сохранения прав доступа (chmod +x)
+          tar -czvf ../../release_assets/AlmaChat-Linux-${{ github.ref_name }}.tar.gz AlmaChat-Linux
+          cd ../..
+
+          # --- Packaging Windows ---
+          cd ./build_output/windows
+          # Файл называется AlmaChat.exe
+          zip -r ../../release_assets/AlmaChat-Windows-${{ github.ref_name }}.zip AlmaChat.exe
+          cd ../..
+
+      # --- ШАГ 6: ПУБЛИКАЦИЯ ---
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: release_assets/*
+          name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
