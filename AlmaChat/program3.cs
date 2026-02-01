@@ -1035,7 +1035,7 @@ class Program
                     // Проверяем онлайн
                     bool isOnline = OnlineUsers.Contains(otherId);
                     // 🟢 (онлайн) или ⚫ (офлайн)
-                    prefix = isOnline ? "🟢" : "⚫"; 
+                    prefix = isOnline ? " ● " : " ○ "; 
                 }
                 
                 return $"{prefix} {c.DisplayName(CurrentUserId)}";
