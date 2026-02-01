@@ -44,6 +44,7 @@ class Program
     // === ДАННЫЕ ===
     static List<ChatDto> Chats = new();
     static List<MessageDto> CurrentMessages = new(); 
+    static HashSet<long> OnlineUsers = new(); // <--- НОВОЕ
     static long CurrentUserId = 0; 
     static string CurrentUserEmail = "";
     static ChatDto? ActiveChat = null;
@@ -684,15 +685,36 @@ class Program
                 
                 if(root.TryGetProperty("type", out var t)) {
                     string type = t.GetString() ?? "";
+
+                    // PING
                     if(type == "ping") {
                          long ts = 0; if(root.TryGetProperty("ts", out var x)) ts = x.GetInt64();
                          var pong = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new { type="pong", ts=ts }));
                          await wsNotif.SendAsync(new ArraySegment<byte>(pong), WebSocketMessageType.Text, true, CancellationToken.None);
                     }
+                    // NOTIFICATION (обычное уведомление)
                     else if(type == "notification") {
                         string body = root.TryGetProperty("body", out var b) ? b.GetString() : "New Notification";
                         long chatId = 0; if(root.TryGetProperty("chat_id", out var cid)) chatId = cid.GetInt64();
                         if(ActiveChat == null || ActiveChat.Id != chatId) ShowNotification(body);
+                    }
+                    // ✅ ONLINE LIST (Полный список при входе)
+                    else if (type == "online_list") {
+                        if (root.TryGetProperty("ids", out var idsEl)) {
+                            var ids = idsEl.EnumerateArray().Select(x => x.GetInt64());
+                            OnlineUsers = new HashSet<long>(ids);
+                            RenderChatList(); // Перерисовываем список
+                        }
+                    }
+                    // ✅ PRESENCE (Изменение статуса одного юзера)
+                    else if (type == "presence") {
+                        if (root.TryGetProperty("user_id", out var uidEl) && root.TryGetProperty("is_online", out var onlineEl)) {
+                            long uid = uidEl.GetInt64();
+                            bool isOnline = onlineEl.GetBoolean();
+                            
+                            bool changed = isOnline ? OnlineUsers.Add(uid) : OnlineUsers.Remove(uid);
+                            if (changed) RenderChatList(); // Перерисовываем список только если статус изменился
+                        }
                     }
                 }
             } catch { break; }
@@ -988,13 +1010,37 @@ class Program
             if (!res.IsSuccessStatusCode) return;
             var json = await res.Content.ReadAsStringAsync();
             Chats = JsonSerializer.Deserialize<List<ChatDto>>(json, JsonOpts) ?? new();
-            Application.MainLoop.Invoke(() => {
-                chatListView.SetSource(Chats.Select(c => {
-                    string icon = c.IsGroup ? "👥" : "👤";
-                    return $"{icon} {c.DisplayName(CurrentUserId)}";
-                }).ToList());
-            });
+            
+            // Вызываем отрисовку
+            RenderChatList();
         } catch {}
+    }
+
+    // Новый метод отрисовки
+    static void RenderChatList()
+    {
+        Application.MainLoop.Invoke(() => {
+            if (chatListView == null) return;
+            
+            chatListView.SetSource(Chats.Select(c => {
+                string prefix = "";
+                if (c.IsGroup) 
+                {
+                    prefix = "👥";
+                }
+                else 
+                {
+                    // Определяем ID собеседника
+                    long otherId = c.GetOtherUserId(CurrentUserId);
+                    // Проверяем онлайн
+                    bool isOnline = OnlineUsers.Contains(otherId);
+                    // 🟢 (онлайн) или ⚫ (офлайн)
+                    prefix = isOnline ? "🟢" : "⚫"; 
+                }
+                
+                return $"{prefix} {c.DisplayName(CurrentUserId)}";
+            }).ToList());
+        });
     }
 }
 
@@ -1023,6 +1069,13 @@ public class ChatDto
         if (IsGroup && !string.IsNullOrWhiteSpace(Name)) return Name;
         var other = Participants.FirstOrDefault(p => p.UserId != myId.ToString());
         return other?.Username ?? "Chat";
+    }
+    
+    public long GetOtherUserId(long myId)
+    {
+        if (IsGroup) return 0;
+        var other = Participants.FirstOrDefault(p => p.UserId != myId.ToString());
+        return other != null && long.TryParse(other.UserId, out long id) ? id : 0;
     }
 }
 
