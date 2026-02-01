@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("AlmaChat")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+5da0cad701192fcd6597302df42995a3150b5574")]
 [assembly: System.Reflection.AssemblyProductAttribute("AlmaChat")]
 [assembly: System.Reflection.AssemblyTitleAttribute("AlmaChat")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

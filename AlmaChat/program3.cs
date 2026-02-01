@@ -19,6 +19,11 @@ class Program
     static string WsSearchUrl = "ws://144.31.93.163/ws/Search/users";
     static string WsNotifUrl = "ws://144.31.93.163/ws/notifications";
 
+    // === КОНФИГУРАЦИЯ ОБНОВЛЕНИЙ ===
+    static string CurrentAppVersion = "v1.0.0"; // Текущая версия
+    static string GithubOwner = "Oleger1000"; // Имя пользователя GitHub
+    static string GithubRepo = "AlmaChat-TUI";  // Название репозитория
+
     static JsonSerializerOptions JsonOpts = new JsonSerializerOptions 
     { 
         PropertyNameCaseInsensitive = true,
@@ -83,6 +88,9 @@ class Program
             
             // Запуск мониторинга ресурсов (в фоне)
             _ = StartSystemMonitor();
+
+            // Запуск проверки обновлений (в фоне, тихий режим)
+            _ = CheckForUpdatesAsync(silent: true);
             
             // Запуск главного цикла
             Application.Run();
@@ -105,6 +113,80 @@ class Program
         }
     }
 
+    // ================== UPDATE CHECKER ==================
+
+    static async Task CheckForUpdatesAsync(bool silent)
+    {
+        try
+        {
+            using var updateClient = new HttpClient();
+            // GitHub API требует User-Agent
+            updateClient.DefaultRequestHeaders.UserAgent.ParseAdd("AlmaChat-Terminal-Client");
+            
+            var url = $"https://api.github.com/repos/{GithubOwner}/{GithubRepo}/releases/latest";
+            var res = await updateClient.GetAsync(url);
+
+            if (!res.IsSuccessStatusCode)
+            {
+                if (!silent) MessageBox.ErrorQuery("Update Error", $"Failed to check updates.\nStatus: {res.StatusCode}", "OK");
+                return;
+            }
+
+            var json = await res.Content.ReadAsStringAsync();
+            var release = JsonSerializer.Deserialize<GitHubReleaseDto>(json, JsonOpts);
+
+            if (release != null && !string.IsNullOrEmpty(release.TagName))
+            {
+                // Сравнение версий (простое сравнение строк для примера)
+                bool isNewer = string.Compare(release.TagName, CurrentAppVersion, StringComparison.OrdinalIgnoreCase) != 0;
+
+                if (isNewer)
+                {
+                    Application.MainLoop.Invoke(() => 
+                    {
+                        if (silent)
+                        {
+                            ShowNotification($"Update {release.TagName} available!");
+                        }
+                        else
+                        {
+                            var btn = MessageBox.Query("Update Available", 
+                                $"New version found: {release.TagName}\nCurrent: {CurrentAppVersion}\n\nOpen download page?", 
+                                "Yes", "No");
+                            
+                            if (btn == 0 && !string.IsNullOrEmpty(release.HtmlUrl))
+                            {
+                                OpenUrl(release.HtmlUrl);
+                            }
+                        }
+                    });
+                }
+                else if (!silent)
+                {
+                    Application.MainLoop.Invoke(() => MessageBox.Query("Up to date", $"You are using the latest version: {CurrentAppVersion}", "OK"));
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            if (!silent) Application.MainLoop.Invoke(() => MessageBox.ErrorQuery("Error", ex.Message, "OK"));
+        }
+    }
+
+    static void OpenUrl(string url)
+    {
+        try
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                Process.Start("xdg-open", url);
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                Process.Start("open", url);
+        }
+        catch { MessageBox.ErrorQuery("Error", "Could not open browser.", "OK"); }
+    }
+
     // ================== THEMES & MONITORING ==================
 
     static void ApplyTheme(AppTheme theme)
@@ -114,7 +196,6 @@ class Program
         switch (theme)
         {
             case AppTheme.SoftDark:
-                // Мягкий серый текст на черном
                 BaseScheme = new ColorScheme { Normal = Application.Driver.MakeAttribute(Color.Gray, Color.Black), Focus = Application.Driver.MakeAttribute(Color.White, Color.DarkGray), HotNormal = Application.Driver.MakeAttribute(Color.White, Color.Black) };
                 InputScheme = new ColorScheme { Normal = Application.Driver.MakeAttribute(Color.DarkGray, Color.Black), Focus = Application.Driver.MakeAttribute(Color.White, Color.DarkGray) };
                 ListScheme = new ColorScheme { Normal = Application.Driver.MakeAttribute(Color.DarkGray, Color.Black), Focus = Application.Driver.MakeAttribute(Color.Black, Color.Gray), HotNormal = Application.Driver.MakeAttribute(Color.White, Color.Black) };
@@ -123,7 +204,6 @@ class Program
                 break;
 
             case AppTheme.Catppuccin:
-                // Имитация Catppuccin (Mocha)
                 var bg = Color.Black; 
                 BaseScheme = new ColorScheme { Normal = Application.Driver.MakeAttribute(Color.BrightCyan, bg), Focus = Application.Driver.MakeAttribute(Color.Black, Color.BrightBlue), HotNormal = Application.Driver.MakeAttribute(Color.BrightMagenta, bg) };
                 InputScheme = new ColorScheme { Normal = Application.Driver.MakeAttribute(Color.BrightYellow, Color.DarkGray), Focus = Application.Driver.MakeAttribute(Color.Black, Color.BrightGreen) };
@@ -134,7 +214,6 @@ class Program
 
             case AppTheme.HighContrast:
             default:
-                // Классический терминал
                 BaseScheme = new ColorScheme { Normal = Application.Driver.MakeAttribute(Color.White, Color.Black), Focus = Application.Driver.MakeAttribute(Color.BrightCyan, Color.Black), HotNormal = Application.Driver.MakeAttribute(Color.BrightGreen, Color.Black) };
                 InputScheme = new ColorScheme { Normal = Application.Driver.MakeAttribute(Color.BrightYellow, Color.Gray), Focus = Application.Driver.MakeAttribute(Color.Black, Color.BrightCyan) };
                 ListScheme = new ColorScheme { Normal = Application.Driver.MakeAttribute(Color.Gray, Color.Black), Focus = Application.Driver.MakeAttribute(Color.Black, Color.BrightGreen), HotNormal = Application.Driver.MakeAttribute(Color.BrightGreen, Color.Black) };
@@ -146,7 +225,6 @@ class Program
         ErrorScheme = new ColorScheme { Normal = Application.Driver.MakeAttribute(Color.BrightRed, Color.Black) };
         NotifScheme = new ColorScheme { Normal = Application.Driver.MakeAttribute(Color.Black, Color.BrightYellow) };
 
-        // Перерисовка текущих окон
         if (mainWin != null) {
             mainWin.ColorScheme = BaseScheme;
             chatListView.ColorScheme = ListScheme;
@@ -168,16 +246,13 @@ class Program
         {
             try
             {
-                // 1. Uptime
                 var uptime = DateTime.Now - AppStartTime;
                 string uptimeStr = $"UP: {uptime:hh\\:mm\\:ss}";
 
-                // 2. RAM Usage
                 using var proc = Process.GetCurrentProcess();
                 long mem = proc.WorkingSet64 / 1024 / 1024; // MB
                 string ramStr = $"RAM: {mem}MB";
 
-                // 3. PING
                 Stopwatch sw = Stopwatch.StartNew();
                 string pingStr = "PING: --ms";
                 try {
@@ -188,7 +263,6 @@ class Program
                     pingStr = $"PING: {ms}ms";
                 } catch { pingStr = "PING: ERR"; }
 
-                // UI Update
                 if (mainWin != null && lblPing != null)
                 {
                     Application.MainLoop.Invoke(() => {
@@ -243,13 +317,17 @@ class Program
     {
         Application.MainLoop.Invoke(() => {
             try { Console.Beep(); } catch {}
-            notifLabel.Text = $" 🔔 {text} ";
-            notifLabel.ColorScheme = NotifScheme;
+            if (notifLabel != null) {
+                notifLabel.Text = $" 🔔 {text} ";
+                notifLabel.ColorScheme = NotifScheme;
+            }
             SendSystemNotification("AlmaChat", text);
 
             Task.Delay(5000).ContinueWith(_ => Application.MainLoop.Invoke(() => {
-                notifLabel.Text = "";
-                notifLabel.ColorScheme = BaseScheme;
+                if (notifLabel != null) {
+                    notifLabel.Text = "";
+                    notifLabel.ColorScheme = BaseScheme;
+                }
             }));
         });
     }
@@ -290,7 +368,6 @@ class Program
                 return; 
             }
 
-            // Если это регистрация -> Переходим к подтверждению кода
             if (isRegister) { 
                 Application.MainLoop.Invoke(() => ShowVerificationDialog(email, password)); 
                 return; 
@@ -311,12 +388,10 @@ class Program
             
             if (openProfileSettings)
             {
-                // Вход после регистрации -> Настройка профиля
                 ShowProfileDialog(isFirstSetup: true);
             }
             else
             {
-                // Обычный вход
                 ShowMainWindow();
             }
 
@@ -348,7 +423,6 @@ class Program
             {
                 Application.RequestStop();
                 MessageBox.Query("Success", "Email confirmed!", "OK");
-                // Логинимся и открываем настройки профиля
                 await PerformAuth(email, password, isRegister: false, openProfileSettings: true); 
             }
         };
@@ -465,7 +539,8 @@ class Program
         menuBar = new MenuBar(new MenuBarItem[] {
             new MenuBarItem ("_SYSTEM", new MenuItem [] { 
                 new MenuItem ("_Settings", "Profile & Config", () => ShowProfileDialog(false)),
-                new MenuItem ("_Themes", "Change Colors", () => ShowThemeSelector()), // Новое меню
+                new MenuItem ("_Themes", "Change Colors", () => ShowThemeSelector()),
+                new MenuItem ("_Check Updates", "Github Releases", () => _ = CheckForUpdatesAsync(false)), // Новое
                 new MenuItem ("_Exit", "", () => Application.RequestStop())
             }),
             new MenuBarItem ("_NETWORK", new MenuItem [] {
@@ -485,8 +560,8 @@ class Program
         var topBar = new View() { X = 0, Y = 1, Width = Dim.Fill(), Height = 1, ColorScheme = BaseScheme };
         
         var lblUser = new Label($" USR: {CurrentUserEmail} ") { ColorScheme = AccentScheme };
+        var lblVer = new Label($" {CurrentAppVersion} ") { X = Pos.Right(lblUser) + 1, ColorScheme = InfoScheme };
         
-        // Гиковская статистика (справа налево)
         lblPing = new Label("PING: --ms") { X = Pos.AnchorEnd(38), ColorScheme = InfoScheme };
         lblRam = new Label("RAM: --MB") { X = Pos.AnchorEnd(26), ColorScheme = InfoScheme };
         lblUptime = new Label("UP: --:--") { X = Pos.AnchorEnd(14), ColorScheme = InfoScheme };
@@ -495,7 +570,7 @@ class Program
 
         notifLabel = new Label("") { X = Pos.Center(), Y = 0, Width = 40, TextAlignment = TextAlignment.Centered, ColorScheme = BaseScheme };
 
-        topBar.Add(lblUser, notifLabel, lblPing, lblRam, lblUptime, wsStatusLabel);
+        topBar.Add(lblUser, lblVer, notifLabel, lblPing, lblRam, lblUptime, wsStatusLabel);
         mainWin.Add(topBar, new LineView(Orientation.Horizontal){ Y = 2 });
 
         // ЧАТЫ
@@ -620,7 +695,6 @@ class Program
 
     static void RefreshMessageList()
     {
-        // ИСПРАВЛЕННАЯ ЛОГИКА ОТОБРАЖЕНИЯ ИМЕН
         var displayList = CurrentMessages.Select(m => {
             string nameToDisplay;
 
@@ -630,10 +704,8 @@ class Program
             }
             else
             {
-                // 1. Имя из сообщения
                 if (!string.IsNullOrEmpty(m.SenderName))
                     nameToDisplay = $"  {m.SenderName}";
-                // 2. Имя из списка участников (если в истории пришел null)
                 else
                 {
                     var participant = ActiveChat?.Participants
@@ -706,7 +778,7 @@ class Program
                         long senderId = 0; if(root.TryGetProperty("sender_id", out var sid)) senderId = sid.GetInt64();
                         long msgId = 0; if(root.TryGetProperty("id", out var mid)) msgId = mid.GetInt64();
                         string content = root.TryGetProperty("content", out var c) ? c.GetString() : "";
-                        string senderName = root.TryGetProperty("sender", out var sn) ? sn.GetString() : null; // null если не пришло
+                        string senderName = root.TryGetProperty("sender", out var sn) ? sn.GetString() : null;
 
                         CurrentMessages.Add(new MessageDto { Id = msgId, SenderId = senderId, SenderName = senderName, Content = content });
                         RefreshMessageList();
@@ -720,9 +792,11 @@ class Program
     static void UpdateWsStatus(bool online)
     {
         Application.MainLoop.Invoke(() => {
-            wsStatusLabel.Text = online ? " ● " : " ○ ";
-            wsStatusLabel.ColorScheme = online ? 
-                new ColorScheme{Normal=Application.Driver.MakeAttribute(Color.BrightGreen, Color.Black)} : ErrorScheme;
+            if (wsStatusLabel != null) {
+                wsStatusLabel.Text = online ? " ● " : " ○ ";
+                wsStatusLabel.ColorScheme = online ? 
+                    new ColorScheme{Normal=Application.Driver.MakeAttribute(Color.BrightGreen, Color.Black)} : ErrorScheme;
+            }
         });
     }
 
@@ -924,4 +998,11 @@ public class UserProfileDto
     [JsonPropertyName("first_name")] public string? FirstName { get; set; }
     [JsonPropertyName("last_name")] public string? LastName { get; set; }
     [JsonPropertyName("bio")] public string? Bio { get; set; }
+}
+
+public class GitHubReleaseDto
+{
+    [JsonPropertyName("tag_name")] public string TagName { get; set; } = "";
+    [JsonPropertyName("html_url")] public string HtmlUrl { get; set; } = "";
+    [JsonPropertyName("name")] public string Name { get; set; } = "";
 }
