@@ -20,13 +20,13 @@ jobs:
       # Мы ищем файл program3.cs внутри папки AlmaChat
       - name: Inject Version into Code
         run: |
-          echo "Injecting version ${{ github.ref_name }} into AlmaChat/program3.cs"
+          echo "Injecting version ${{ github.ref_name }} into AlmaChat/Main.cs"
           
           # sed ищет строку CurrentAppVersion = "..."; и меняет её на версию из тега
-          sed -i 's/static string CurrentAppVersion = ".*";/static string CurrentAppVersion = "${{ github.ref_name }}";/' AlmaChat/program3.cs
+          sed -i 's/static string CurrentAppVersion = ".*";/static string CurrentAppVersion = "${{ github.ref_name }}";/' AlmaChat/Main.cs
           
           # Проверка (вывод в лог)
-          grep "CurrentAppVersion" AlmaChat/program3.cs
+          grep "CurrentAppVersion" AlmaChat/Main.cs
 
       # --- ШАГ 2: УСТАНОВКА .NET ---
       # Судя по дереву bin/Debug/net10.0, вы используете bleeding edge версию.
